@@ -26,6 +26,7 @@ import main.ast.types.Type;
 public class TypeChecker extends Visitor<Void> {
     private final Graph<String> classHierarchy;
     private final ExpressionTypeChecker expressionTypeChecker;
+    public static ClassDeclaration currentClass = null;
 
     public TypeChecker(Graph<String> classHierarchy) {
         this.classHierarchy = classHierarchy;
@@ -36,20 +37,17 @@ public class TypeChecker extends Visitor<Void> {
     {
         // error number 26
         //todo: check if it works properly
-        if(mainClassDeclaration.getParentClassName() != null)
-        {
+        if(mainClassDeclaration.getParentClassName() != null) {
             MainClassCantExtend exception = new MainClassCantExtend(mainClassDeclaration.getLine());
             mainClassDeclaration.addError(exception);
         }
         // error number 28
-        if(mainClassDeclaration.getConstructor() == null)
-        {
+        if(mainClassDeclaration.getConstructor() == null) {
             NoConstructorInMainClass exception = new NoConstructorInMainClass(mainClassDeclaration);
             mainClassDeclaration.addError(exception);
         }
         // error number 29
-        else if (!mainClassDeclaration.getConstructor().getArgs().isEmpty())
-        {
+        else if (!mainClassDeclaration.getConstructor().getArgs().isEmpty()) {
             MainConstructorCantHaveArgs exception = new MainConstructorCantHaveArgs(mainClassDeclaration.getLine());
             mainClassDeclaration.addError(exception);
         }
@@ -63,15 +61,15 @@ public class TypeChecker extends Visitor<Void> {
         boolean mainFound = false;
         SymbolTable.top = SymbolTable.root;
         for(ClassDeclaration classDeclaration : program.getClasses()) {
-            if(classDeclaration.getClassName().toString().equals("Main"))
-            {
+            if(classDeclaration.getClassName().toString().equals("Main")) {
                 mainFound = true;
                 checkMainClassErrors(classDeclaration);
             }
+            currentClass = classDeclaration;
             classDeclaration.accept(this);
+            currentClass = null;
         }
-        if(!mainFound)
-        {
+        if(!mainFound) {
             NoMainClass exception = new NoMainClass();
             program.addError(exception);
         }
@@ -86,13 +84,10 @@ public class TypeChecker extends Visitor<Void> {
             SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
 
             // error number 27
-            if(classDeclaration.getParentClassName().toString().equals("Main"))
-            {
+            if(classDeclaration.getParentClassName().toString().equals("Main")) {
                 CannotExtendFromMainClass exception = new CannotExtendFromMainClass(classDeclaration.getLine());
                 classDeclaration.addError(exception);
             }
-
-
 
             for(FieldDeclaration fieldDeclaration : classDeclaration.getFields()) {
                 fieldDeclaration.accept(this);
@@ -118,8 +113,7 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(MethodDeclaration methodDeclaration) {
         try {
-            MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top
-                    .getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), false);
+            MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top.getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), false);
             SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
             for(VarDeclaration varDeclaration : methodDeclaration.getArgs()) {
                 varDeclaration.accept(this);

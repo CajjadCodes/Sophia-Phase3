@@ -17,10 +17,14 @@ import main.ast.types.single.ClassType;
 import main.ast.types.single.IntType;
 import main.ast.types.single.StringType;
 import main.compileErrorException.typeErrors.CallOnNoneFptrType;
+import main.compileErrorException.typeErrors.ClassNotDeclared;
 import main.compileErrorException.typeErrors.MethodCallNotMatchDefinition;
+import main.compileErrorException.typeErrors.VarNotDeclared;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.ClassSymbolTableItem;
+import main.symbolTable.items.FieldSymbolTableItem;
+import main.symbolTable.items.LocalVariableSymbolTableItem;
 import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
 import main.symbolTable.utils.graph.exceptions.GraphDoesNotContainNodeException;
@@ -56,8 +60,41 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(Identifier identifier) {
-        //search for different type of identifiers, like class or func or var
-        return new FptrType(/*args, retType*/); //must set the return type and arguments
+        //check for variable
+        try {
+            LocalVariableSymbolTableItem localItem = (LocalVariableSymbolTableItem) SymbolTable.top
+                    .getItem(LocalVariableSymbolTableItem.START_KEY + identifier.getName(), true);
+                    return localItem.getType();
+
+        } catch (ItemNotFoundException ignored) {}
+
+        //check for field
+        try {
+            FieldSymbolTableItem fieldItem = (FieldSymbolTableItem) SymbolTable.top
+                    .getItem(FieldSymbolTableItem.START_KEY + identifier.getName(), true);
+            return fieldItem.getType();
+
+        } catch (ItemNotFoundException ignored) {}
+
+        //check for class
+        try {
+            ClassSymbolTableItem classItem = (ClassSymbolTableItem) SymbolTable.top
+                    .getItem(ClassSymbolTableItem.START_KEY + identifier.getName(), true);
+            return new ClassType(classItem.getClassDeclaration().getClassName());
+
+        } catch (ItemNotFoundException ignored) {}
+
+        //check for funcPtr
+        try {
+            MethodSymbolTableItem methodItem = (MethodSymbolTableItem) SymbolTable.top
+                    .getItem(MethodSymbolTableItem.START_KEY + identifier.getName(), true);
+            return new FptrType(methodItem.getArgTypes(), methodItem.getReturnType());
+
+        } catch (ItemNotFoundException err) { // error number 1
+            VarNotDeclared exception = new VarNotDeclared(identifier.getLine(), identifier.getName());
+            identifier.addError(exception);
+            return new NoType();
+        }
     }
 
     @Override
@@ -70,22 +107,24 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(MethodCall methodCall) {
         Type retType = methodCall.getInstance().accept(this);
-        if (!(retType instanceof FptrType)) { //Error 8
+        if (!(retType instanceof FptrType)) { // error number 8
             CallOnNoneFptrType exception = new CallOnNoneFptrType(methodCall.getLine());
             methodCall.addError(exception);
             return new NoType(); //?
         }
         FptrType fptrType = (FptrType) retType;
-        if (methodCall.getArgs().size() != fptrType.getArgumentsTypes().size()) { //Error 15
+        if (methodCall.getArgs().size() != fptrType.getArgumentsTypes().size()) { // error number 15
             MethodCallNotMatchDefinition exception = new MethodCallNotMatchDefinition(methodCall.getLine());
             methodCall.addError(exception);
         }
-        for (int i = 0; i < methodCall.getArgs().size(); i++) { //Error 15
-            Type methodCallArgType = methodCall.getArgs().get(i).accept(this);
-            if (!methodCallArgType.equals(fptrType.getArgumentsTypes().get(i))) {
-                MethodCallNotMatchDefinition exception = new MethodCallNotMatchDefinition(methodCall.getLine());
-                methodCall.addError(exception);
-                break;
+        else {
+            for (int i = 0; i < methodCall.getArgs().size(); i++) { // error number 15
+                Type methodCallArgType = methodCall.getArgs().get(i).accept(this);
+                if (!methodCallArgType.equals(fptrType.getArgumentsTypes().get(i))) {
+                    MethodCallNotMatchDefinition exception = new MethodCallNotMatchDefinition(methodCall.getLine());
+                    methodCall.addError(exception);
+                    break;
+                }
             }
         }
         return fptrType.getReturnType();
@@ -93,12 +132,22 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(NewClassInstance newClassInstance) {
+        try {
+            SymbolTable.top
+                    .getItem(ClassSymbolTableItem.START_KEY
+                            + newClassInstance.getClassType().getClassName().getName(), true);
+        } catch (ItemNotFoundException exp) { // error number 2
+            ClassNotDeclared exception = new ClassNotDeclared(newClassInstance.getLine(),
+                    newClassInstance.getClassType().getClassName().getName());
+            newClassInstance.addError(exception);
+            return new NoType(); //?
+        }
         return newClassInstance.getClassType();
     }
 
     @Override
     public Type visit(ThisClass thisClass) {
-        return null;
+        return new ClassType(TypeChecker.currentClass.getClassName());
     }
 
     @Override
