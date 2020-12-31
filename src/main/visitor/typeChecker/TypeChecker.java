@@ -11,9 +11,15 @@ import main.ast.nodes.statement.loop.BreakStmt;
 import main.ast.nodes.statement.loop.ContinueStmt;
 import main.ast.nodes.statement.loop.ForStmt;
 import main.ast.nodes.statement.loop.ForeachStmt;
+import main.ast.types.single.BoolType;
+import main.compileErrorException.typeErrors.ConditionNotBool;
 import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.ClassSymbolTableItem;
+import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
 import main.visitor.Visitor;
+import main.ast.types.Type;
 
 public class TypeChecker extends Visitor<Void> {
     private final Graph<String> classHierarchy;
@@ -26,6 +32,7 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(Program program) {
+        SymbolTable.top = SymbolTable.root;
         for(ClassDeclaration classDeclaration : program.getClasses()) {
             classDeclaration.accept(this);
         }
@@ -34,94 +41,136 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(ClassDeclaration classDeclaration) {
-        //SymbolTable.push(SymbolTable.root.getItem());
+        try {
+            ClassSymbolTableItem classSymbolTableItem = (ClassSymbolTableItem) SymbolTable.top
+                    .getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), false);
+            SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
 
-
-        //SymbolTable.pop()
+            for(FieldDeclaration fieldDeclaration : classDeclaration.getFields()) {
+                fieldDeclaration.accept(this);
+            }
+            if(classDeclaration.getConstructor() != null) {
+                classDeclaration.getConstructor().accept(this);
+            }
+            for(MethodDeclaration methodDeclaration : classDeclaration.getMethods()) {
+                methodDeclaration.accept(this);
+            }
+            SymbolTable.pop();
+        } catch (ItemNotFoundException ignored) {}
         return null;
     }
 
     @Override
     public Void visit(ConstructorDeclaration constructorDeclaration) {
-        //TODO
+        this.visit((MethodDeclaration) constructorDeclaration);
         return null;
     }
 
     @Override
     public Void visit(MethodDeclaration methodDeclaration) {
-        //TODO
+        try {
+            MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top
+                    .getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), false);
+            SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
+            for(VarDeclaration varDeclaration : methodDeclaration.getArgs()) {
+                varDeclaration.accept(this);
+            }
+            for(VarDeclaration varDeclaration : methodDeclaration.getLocalVars()) {
+                varDeclaration.accept(this);
+            }
+            for(Statement statement : methodDeclaration.getBody()) {
+                statement.accept(this);
+            }
+            SymbolTable.pop();
+        } catch (ItemNotFoundException ignored) {}
+
         return null;
     }
 
     @Override
     public Void visit(FieldDeclaration fieldDeclaration) {
-        //TODO
+        fieldDeclaration.getVarDeclaration().accept(this);
         return null;
     }
 
     @Override
     public Void visit(VarDeclaration varDeclaration) {
-        //TODO
+        // nothing?
         return null;
     }
 
     @Override
     public Void visit(AssignmentStmt assignmentStmt) {
-        //TODO
+        assignmentStmt.getlValue().accept(this.expressionTypeChecker);
+        assignmentStmt.getrValue().accept(this.expressionTypeChecker);
         return null;
     }
 
     @Override
     public Void visit(BlockStmt blockStmt) {
-        //TODO
+        for(Statement statement : blockStmt.getStatements()) {
+            statement.accept(this);
+        }
         return null;
     }
 
     @Override
     public Void visit(ConditionalStmt conditionalStmt) {
-        //TODO
+        Type conditionType = conditionalStmt.getCondition().accept(this.expressionTypeChecker);
+        if (!(conditionType instanceof BoolType)) {
+            ConditionNotBool exception = new ConditionNotBool(conditionalStmt.getLine());
+            conditionalStmt.addError(exception);
+        }
+        conditionalStmt.getThenBody().accept(this);
+        conditionalStmt.getElseBody().accept(this);
         return null;
     }
 
     @Override
     public Void visit(MethodCallStmt methodCallStmt) {
-        //TODO
+        methodCallStmt.accept(this.expressionTypeChecker);
         return null;
     }
 
     @Override
     public Void visit(PrintStmt print) {
-        //TODO
+        print.accept(this.expressionTypeChecker);
         return null;
     }
 
     @Override
     public Void visit(ReturnStmt returnStmt) {
-        //TODO
+        returnStmt.getReturnedExpr().accept(this.expressionTypeChecker);
         return null;
     }
 
     @Override
     public Void visit(BreakStmt breakStmt) {
-        //TODO
         return null;
     }
 
     @Override
     public Void visit(ContinueStmt continueStmt) {
-        //TODO
         return null;
     }
 
     @Override
     public Void visit(ForeachStmt foreachStmt) {
-        //TODO
+        foreachStmt.getList().accept(this.expressionTypeChecker);
+        foreachStmt.getBody().accept(this);
         return null;
     }
 
     @Override
     public Void visit(ForStmt forStmt) {
-        //TODO
+        forStmt.getInitialize().accept(this);
+        Type conditionType = forStmt.getCondition().accept(this.expressionTypeChecker);
+        if (!(conditionType instanceof BoolType)) {
+            ConditionNotBool exception = new ConditionNotBool(forStmt.getLine());
+            forStmt.addError(exception);
+        }
+        forStmt.getUpdate().accept(this);
+        forStmt.getBody().accept(this);
         return null;
     }
 
