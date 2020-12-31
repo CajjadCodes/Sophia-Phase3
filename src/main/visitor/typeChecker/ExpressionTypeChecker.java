@@ -6,9 +6,23 @@ import main.ast.nodes.expression.values.NullValue;
 import main.ast.nodes.expression.values.primitive.BoolValue;
 import main.ast.nodes.expression.values.primitive.IntValue;
 import main.ast.nodes.expression.values.primitive.StringValue;
+import main.ast.types.NullType;
 import main.ast.types.Type;
+import main.ast.types.list.ListNameType;
+import main.ast.types.list.ListType;
+import main.ast.types.single.BoolType;
+import main.ast.types.single.ClassType;
+import main.ast.types.single.IntType;
+import main.ast.types.single.StringType;
+import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.ClassSymbolTableItem;
+import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
+import main.symbolTable.utils.graph.exceptions.GraphDoesNotContainNodeException;
 import main.visitor.Visitor;
+import main.visitor.nameAnalyzer.NameAnalyzer;
+import main.visitor.nameAnalyzer.NameChecker;
 
 
 public class ExpressionTypeChecker extends Visitor<Type> {
@@ -39,60 +53,69 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(Identifier identifier) {
         //TODO
+        try {
+            MethodSymbolTableItem methodSTI = (MethodSymbolTableItem) SymbolTable.root
+                    .getItem(MethodSymbolTableItem.START_KEY + methodCall.getInstance()., true);
+        } catch (ItemNotFoundException ignored) {/*todo*/ }
         return null;
     }
 
     @Override
     public Type visit(ListAccessByIndex listAccessByIndex) {
         //TODO
+
         return null;
     }
 
     @Override
     public Type visit(MethodCall methodCall) {
         //TODO
+        try {
+            MethodSymbolTableItem methodSTI = (MethodSymbolTableItem) SymbolTable.root
+                    .getItem(MethodSymbolTableItem.START_KEY + methodCall.getInstance()., true);
+        } catch (ItemNotFoundException ignored) {/*todo*/ }
         return null;
     }
 
     @Override
     public Type visit(NewClassInstance newClassInstance) {
         //TODO
-        return null;
+        return newClassInstance.getClassType();
     }
 
     @Override
     public Type visit(ThisClass thisClass) {
-        //TODO
-        return null;
+        //TODO this.
+        return ;
     }
 
     @Override
     public Type visit(ListValue listValue) {
-        //TODO
-        return null;
+        ListType listType = new ListType();
+        for (Expression expression : listValue.getElements()) {
+            Type elementType = expression.accept(this);
+            listType.addElementType(new ListNameType(elementType));
+        }
+        return listType;
     }
 
     @Override
     public Type visit(NullValue nullValue) {
-        //TODO
-        return null;
+        return new NullType();
     }
 
     @Override
     public Type visit(IntValue intValue) {
-        //TODO
-        return null;
+        return new IntType();
     }
 
     @Override
     public Type visit(BoolValue boolValue) {
-        //TODO
-        return null;
+        return new BoolType();
     }
 
     @Override
     public Type visit(StringValue stringValue) {
-        //TODO
-        return null;
+        return new StringType();
     }
 }
