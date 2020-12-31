@@ -1,122 +1,121 @@
 package main.visitor.typeChecker;
 
-import main.ast.nodes.Program;
-import main.ast.nodes.declaration.classDec.ClassDeclaration;
-import main.ast.nodes.declaration.classDec.classMembersDec.ConstructorDeclaration;
-import main.ast.nodes.declaration.classDec.classMembersDec.FieldDeclaration;
-import main.ast.nodes.declaration.classDec.classMembersDec.MethodDeclaration;
-import main.ast.nodes.declaration.variableDec.VarDeclaration;
-import main.ast.nodes.statement.*;
-import main.ast.nodes.statement.loop.BreakStmt;
-import main.ast.nodes.statement.loop.ContinueStmt;
-import main.ast.nodes.statement.loop.ForStmt;
-import main.ast.nodes.statement.loop.ForeachStmt;
+import main.ast.nodes.expression.*;
+import main.ast.nodes.expression.values.ListValue;
+import main.ast.nodes.expression.values.NullValue;
+import main.ast.nodes.expression.values.primitive.BoolValue;
+import main.ast.nodes.expression.values.primitive.IntValue;
+import main.ast.nodes.expression.values.primitive.StringValue;
+import main.ast.types.NullType;
+import main.ast.types.Type;
+import main.ast.types.list.ListNameType;
+import main.ast.types.list.ListType;
+import main.ast.types.single.BoolType;
+import main.ast.types.single.ClassType;
+import main.ast.types.single.IntType;
+import main.ast.types.single.StringType;
+import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.ClassSymbolTableItem;
+import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
+import main.symbolTable.utils.graph.exceptions.GraphDoesNotContainNodeException;
 import main.visitor.Visitor;
+import main.visitor.nameAnalyzer.NameAnalyzer;
+import main.visitor.nameAnalyzer.NameChecker;
 
-public class TypeChecker extends Visitor<Void> {
+
+public class ExpressionTypeChecker extends Visitor<Type> {
     private final Graph<String> classHierarchy;
-    private final ExpressionTypeChecker expressionTypeChecker;
 
-    public TypeChecker(Graph<String> classHierarchy) {
+    public ExpressionTypeChecker(Graph<String> classHierarchy) {
         this.classHierarchy = classHierarchy;
-        this.expressionTypeChecker = new ExpressionTypeChecker(classHierarchy);
     }
 
     @Override
-    public Void visit(Program program) {
+    public Type visit(BinaryExpression binaryExpression) {
         //TODO
         return null;
     }
 
     @Override
-    public Void visit(ClassDeclaration classDeclaration) {
+    public Type visit(UnaryExpression unaryExpression) {
         //TODO
         return null;
     }
 
     @Override
-    public Void visit(ConstructorDeclaration constructorDeclaration) {
+    public Type visit(ObjectOrListMemberAccess objectOrListMemberAccess) {
         //TODO
         return null;
     }
 
     @Override
-    public Void visit(MethodDeclaration methodDeclaration) {
+    public Type visit(Identifier identifier) {
         //TODO
+        try {
+            MethodSymbolTableItem methodSTI = (MethodSymbolTableItem) SymbolTable.root
+                    .getItem(MethodSymbolTableItem.START_KEY + methodCall.getInstance()., true);
+        } catch (ItemNotFoundException ignored) {/*todo*/ }
         return null;
     }
 
     @Override
-    public Void visit(FieldDeclaration fieldDeclaration) {
+    public Type visit(ListAccessByIndex listAccessByIndex) {
         //TODO
+
         return null;
     }
 
     @Override
-    public Void visit(VarDeclaration varDeclaration) {
+    public Type visit(MethodCall methodCall) {
         //TODO
+        try {
+            MethodSymbolTableItem methodSTI = (MethodSymbolTableItem) SymbolTable.root
+                    .getItem(MethodSymbolTableItem.START_KEY + methodCall.getInstance()., true);
+        } catch (ItemNotFoundException ignored) {/*todo*/ }
         return null;
     }
 
     @Override
-    public Void visit(AssignmentStmt assignmentStmt) {
+    public Type visit(NewClassInstance newClassInstance) {
         //TODO
-        return null;
+        return newClassInstance.getClassType();
     }
 
     @Override
-    public Void visit(BlockStmt blockStmt) {
-        //TODO
-        return null;
+    public Type visit(ThisClass thisClass) {
+        //TODO this.
+        return ;
     }
 
     @Override
-    public Void visit(ConditionalStmt conditionalStmt) {
-        //TODO
-        return null;
+    public Type visit(ListValue listValue) {
+        ListType listType = new ListType();
+        for (Expression expression : listValue.getElements()) {
+            Type elementType = expression.accept(this);
+            listType.addElementType(new ListNameType(elementType));
+        }
+        return listType;
     }
 
     @Override
-    public Void visit(MethodCallStmt methodCallStmt) {
-        //TODO
-        return null;
+    public Type visit(NullValue nullValue) {
+        return new NullType();
     }
 
     @Override
-    public Void visit(PrintStmt print) {
-        //TODO
-        return null;
+    public Type visit(IntValue intValue) {
+        return new IntType();
     }
 
     @Override
-    public Void visit(ReturnStmt returnStmt) {
-        //TODO
-        return null;
+    public Type visit(BoolValue boolValue) {
+        return new BoolType();
     }
 
     @Override
-    public Void visit(BreakStmt breakStmt) {
-        //TODO
-        return null;
+    public Type visit(StringValue stringValue) {
+        return new StringType();
     }
-
-    @Override
-    public Void visit(ContinueStmt continueStmt) {
-        //TODO
-        return null;
-    }
-
-    @Override
-    public Void visit(ForeachStmt foreachStmt) {
-        //TODO
-        return null;
-    }
-
-    @Override
-    public Void visit(ForStmt forStmt) {
-        //TODO
-        return null;
-    }
-
 }
