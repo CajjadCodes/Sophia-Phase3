@@ -12,7 +12,10 @@ import main.ast.nodes.statement.loop.ContinueStmt;
 import main.ast.nodes.statement.loop.ForStmt;
 import main.ast.nodes.statement.loop.ForeachStmt;
 import main.ast.types.single.BoolType;
+import main.ast.types.single.IntType;
+import main.ast.types.single.StringType;
 import main.compileErrorException.typeErrors.ConditionNotBool;
+import main.compileErrorException.typeErrors.UnsupportedTypeForPrint;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.ClassSymbolTableItem;
@@ -95,7 +98,6 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(VarDeclaration varDeclaration) {
-        // nothing?
         return null;
     }
 
@@ -117,7 +119,7 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(ConditionalStmt conditionalStmt) {
         Type conditionType = conditionalStmt.getCondition().accept(this.expressionTypeChecker);
-        if (!(conditionType instanceof BoolType)) {
+        if (!(conditionType instanceof BoolType)) { //Error 5
             ConditionNotBool exception = new ConditionNotBool(conditionalStmt.getLine());
             conditionalStmt.addError(exception);
         }
@@ -134,7 +136,11 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(PrintStmt print) {
-        print.accept(this.expressionTypeChecker);
+        Type exprType = print.accept(this.expressionTypeChecker);
+        if (!(exprType instanceof IntType) && !(exprType instanceof BoolType) && !(exprType instanceof StringType)) { //Error 10
+            UnsupportedTypeForPrint exception = new UnsupportedTypeForPrint(print.getLine());
+            print.addError(exception);
+        }
         return null;
     }
 
@@ -165,7 +171,7 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(ForStmt forStmt) {
         forStmt.getInitialize().accept(this);
         Type conditionType = forStmt.getCondition().accept(this.expressionTypeChecker);
-        if (!(conditionType instanceof BoolType)) {
+        if (!(conditionType instanceof BoolType)) { //Error 5
             ConditionNotBool exception = new ConditionNotBool(forStmt.getLine());
             forStmt.addError(exception);
         }

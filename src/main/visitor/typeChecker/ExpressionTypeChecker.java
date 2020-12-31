@@ -6,14 +6,18 @@ import main.ast.nodes.expression.values.NullValue;
 import main.ast.nodes.expression.values.primitive.BoolValue;
 import main.ast.nodes.expression.values.primitive.IntValue;
 import main.ast.nodes.expression.values.primitive.StringValue;
+import main.ast.types.NoType;
 import main.ast.types.NullType;
 import main.ast.types.Type;
+import main.ast.types.functionPointer.FptrType;
 import main.ast.types.list.ListNameType;
 import main.ast.types.list.ListType;
 import main.ast.types.single.BoolType;
 import main.ast.types.single.ClassType;
 import main.ast.types.single.IntType;
 import main.ast.types.single.StringType;
+import main.compileErrorException.typeErrors.CallOnNoneFptrType;
+import main.compileErrorException.typeErrors.MethodCallNotMatchDefinition;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.ClassSymbolTableItem;
@@ -52,12 +56,8 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(Identifier identifier) {
-        //TODO
-        try {
-            MethodSymbolTableItem methodSTI = (MethodSymbolTableItem) SymbolTable.root
-                    .getItem(MethodSymbolTableItem.START_KEY + methodCall.getInstance()., true);
-        } catch (ItemNotFoundException ignored) {/*todo*/ }
-        return null;
+        //search for different type of identifiers, like class or func or var
+        return new FptrType(/*args, retType*/); //must set the return type and arguments
     }
 
     @Override
@@ -69,24 +69,36 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(MethodCall methodCall) {
-        //TODO
-        try {
-            MethodSymbolTableItem methodSTI = (MethodSymbolTableItem) SymbolTable.root
-                    .getItem(MethodSymbolTableItem.START_KEY + methodCall.getInstance()., true);
-        } catch (ItemNotFoundException ignored) {/*todo*/ }
-        return null;
+        Type retType = methodCall.getInstance().accept(this);
+        if (!(retType instanceof FptrType)) { //Error 8
+            CallOnNoneFptrType exception = new CallOnNoneFptrType(methodCall.getLine());
+            methodCall.addError(exception);
+            return new NoType(); //?
+        }
+        FptrType fptrType = (FptrType) retType;
+        if (methodCall.getArgs().size() != fptrType.getArgumentsTypes().size()) { //Error 15
+            MethodCallNotMatchDefinition exception = new MethodCallNotMatchDefinition(methodCall.getLine());
+            methodCall.addError(exception);
+        }
+        for (int i = 0; i < methodCall.getArgs().size(); i++) { //Error 15
+            Type methodCallArgType = methodCall.getArgs().get(i).accept(this);
+            if (!methodCallArgType.equals(fptrType.getArgumentsTypes().get(i))) {
+                MethodCallNotMatchDefinition exception = new MethodCallNotMatchDefinition(methodCall.getLine());
+                methodCall.addError(exception);
+                break;
+            }
+        }
+        return fptrType.getReturnType();
     }
 
     @Override
     public Type visit(NewClassInstance newClassInstance) {
-        //TODO
         return newClassInstance.getClassType();
     }
 
     @Override
     public Type visit(ThisClass thisClass) {
-        //TODO this.
-        return ;
+        return null;
     }
 
     @Override
