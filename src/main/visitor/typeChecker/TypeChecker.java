@@ -11,6 +11,8 @@ import main.ast.nodes.statement.loop.BreakStmt;
 import main.ast.nodes.statement.loop.ContinueStmt;
 import main.ast.nodes.statement.loop.ForStmt;
 import main.ast.nodes.statement.loop.ForeachStmt;
+import main.ast.types.list.ListNameType;
+import main.ast.types.list.ListType;
 import main.ast.types.single.BoolType;
 import main.ast.types.single.IntType;
 import main.ast.types.single.StringType;
@@ -22,6 +24,8 @@ import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
 import main.visitor.Visitor;
 import main.ast.types.Type;
+
+import java.util.Collection;
 
 public class TypeChecker extends Visitor<Void> {
     private final Graph<String> classHierarchy;
@@ -204,12 +208,24 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(ContinueStmt continueStmt) {
+
         return null;
     }
 
     @Override
     public Void visit(ForeachStmt foreachStmt) {
-        foreachStmt.getList().accept(this.expressionTypeChecker);
+        Type returnedType = foreachStmt.getList().accept(this.expressionTypeChecker);
+        //error number 19
+        if(!(returnedType instanceof ListType))
+        {
+            ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(foreachStmt.getLine());
+            foreachStmt.addError(exception);
+        }
+        else
+        {
+
+        }
+
         foreachStmt.getBody().accept(this);
         return null;
     }
