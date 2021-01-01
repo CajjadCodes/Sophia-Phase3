@@ -16,10 +16,7 @@ import main.ast.types.single.BoolType;
 import main.ast.types.single.ClassType;
 import main.ast.types.single.IntType;
 import main.ast.types.single.StringType;
-import main.compileErrorException.typeErrors.CallOnNoneFptrType;
-import main.compileErrorException.typeErrors.ClassNotDeclared;
-import main.compileErrorException.typeErrors.MethodCallNotMatchDefinition;
-import main.compileErrorException.typeErrors.VarNotDeclared;
+import main.compileErrorException.typeErrors.*;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.ClassSymbolTableItem;
@@ -27,10 +24,7 @@ import main.symbolTable.items.FieldSymbolTableItem;
 import main.symbolTable.items.LocalVariableSymbolTableItem;
 import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
-import main.symbolTable.utils.graph.exceptions.GraphDoesNotContainNodeException;
 import main.visitor.Visitor;
-import main.visitor.nameAnalyzer.NameAnalyzer;
-import main.visitor.nameAnalyzer.NameChecker;
 
 
 public class ExpressionTypeChecker extends Visitor<Type> {
@@ -99,35 +93,84 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(ListAccessByIndex listAccessByIndex) {
-        //TODO
+        Type instanceType = listAccessByIndex.getInstance().accept(this);
+        Type indexType = listAccessByIndex.getIndex().accept(this);
+        if ((instanceType instanceof NoType) || (indexType instanceof NoType)) {
+            return new NoType();
+        }
+        boolean foundIndexTypeError = false;
+        if (!(indexType instanceof IntType)) { // error number 23
+            ListIndexNotInt exception = new ListIndexNotInt(listAccessByIndex.getLine());
+            listAccessByIndex.addError(exception);
+            foundIndexTypeError = true;
+        }
+        if (!(instanceType instanceof ListType)) { // error number 22
+            ListAccessByIndexOnNoneList exception = new ListAccessByIndexOnNoneList(listAccessByIndex.getLine());
+            listAccessByIndex.addError(exception);
+            return new NoType();
+        }
+        ListType instanceListType = (ListType) instanceType;
 
-        return null;
+        boolean areAllElementsSameType = true;
+        for (ListNameType elementType : instanceListType.getElementsTypes()) {
+            if (!elementType.getType().equals(instanceListType.getElementsTypes().get(0).getType())) {
+                areAllElementsSameType = false;
+                break;
+            }
+        }
+        if (!(listAccessByIndex.getIndex() instanceof IntValue) && !areAllElementsSameType) { // error number 12
+            CantUseExprAsIndexOfMultiTypeList exception = new CantUseExprAsIndexOfMultiTypeList(listAccessByIndex.getLine());
+            listAccessByIndex.addError(exception);
+            return new NoType();
+        }
+        else {
+            if (foundIndexTypeError) {
+                return new NoType();
+            }
+        }
+        if ((listAccessByIndex.getIndex() instanceof IntValue) && areAllElementsSameType) {
+            IntValue indexIntValue = (IntValue) listAccessByIndex.getIndex();
+            if (indexIntValue.getConstant() < instanceListType.getElementsTypes().size()) {
+                return instanceListType.getElementsTypes().get(indexIntValue.getConstant()).getType();
+            }
+            else {
+                return instanceListType.getElementsTypes().get(0).getType();
+            }
+        }
+        else {
+            return instanceListType.getElementsTypes().get(0).getType();
+        }
     }
 
     @Override
     public Type visit(MethodCall methodCall) {
-        Type retType = methodCall.getInstance().accept(this);
-        if (!(retType instanceof FptrType)) { // error number 8
+        Type instanceType = methodCall.getInstance().accept(this);
+        if (instanceType instanceof NoType) {
+            return new NoType();
+        }
+        if (!(instanceType instanceof FptrType)) { // error number 8
             CallOnNoneFptrType exception = new CallOnNoneFptrType(methodCall.getLine());
             methodCall.addError(exception);
-            return new NoType(); //?
+            return new NoType();
         }
-        FptrType fptrType = (FptrType) retType;
-        if (methodCall.getArgs().size() != fptrType.getArgumentsTypes().size()) { // error number 15
+        FptrType instanceFptrType = (FptrType) instanceType;
+        // error number 15
+        if (methodCall.getArgs().size() != instanceFptrType.getArgumentsTypes().size()) {
             MethodCallNotMatchDefinition exception = new MethodCallNotMatchDefinition(methodCall.getLine());
             methodCall.addError(exception);
+            return new NoType();
         }
         else {
-            for (int i = 0; i < methodCall.getArgs().size(); i++) { // error number 15
-                Type methodCallArgType = methodCall.getArgs().get(i).accept(this);
-                if (!methodCallArgType.equals(fptrType.getArgumentsTypes().get(i))) {
+            for (int i = 0; i < methodCall.getArgs().size(); i++) {
+                Type callingArgType = methodCall.getArgs().get(i).accept(this);
+                if (!this.isFirstTypeSubtypeOf(callingArgType, instanceFptrType.getArgumentsTypes().get(i))) { //?
                     MethodCallNotMatchDefinition exception = new MethodCallNotMatchDefinition(methodCall.getLine());
                     methodCall.addError(exception);
-                    break;
+                    return new NoType();
                 }
             }
         }
-        return fptrType.getReturnType();
+        return instanceFptrType.getReturnType();
     }
 
     @Override
@@ -140,7 +183,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             ClassNotDeclared exception = new ClassNotDeclared(newClassInstance.getLine(),
                     newClassInstance.getClassType().getClassName().getName());
             newClassInstance.addError(exception);
-            return new NoType(); //?
+            return new NoType();
         }
         return newClassInstance.getClassType();
     }
