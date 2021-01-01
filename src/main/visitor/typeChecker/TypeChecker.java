@@ -94,6 +94,13 @@ public class TypeChecker extends Visitor<Void> {
             }
             if(classDeclaration.getConstructor() != null) {
 
+                //error number 17
+                if(!classDeclaration.getConstructor().getMethodName().toString().equals(classDeclaration.getClassName().toString()))
+                {
+                    ConstructorNotSameNameAsClass exception = new ConstructorNotSameNameAsClass(classDeclaration.getConstructor().getLine());
+                    classDeclaration.getConstructor().addError(exception);
+                }
+
                 classDeclaration.getConstructor().accept(this);
             }
             for(MethodDeclaration methodDeclaration : classDeclaration.getMethods()) {
@@ -216,6 +223,7 @@ public class TypeChecker extends Visitor<Void> {
             forStmt.addError(exception);
         }
         forStmt.getUpdate().accept(this);
+
         forStmt.getBody().accept(this);
         return null;
     }
