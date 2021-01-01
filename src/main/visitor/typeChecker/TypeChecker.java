@@ -14,8 +14,7 @@ import main.ast.nodes.statement.loop.ForeachStmt;
 import main.ast.types.single.BoolType;
 import main.ast.types.single.IntType;
 import main.ast.types.single.StringType;
-import main.compileErrorException.typeErrors.ConditionNotBool;
-import main.compileErrorException.typeErrors.UnsupportedTypeForPrint;
+import main.compileErrorException.typeErrors.*;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.ClassSymbolTableItem;
@@ -33,11 +32,48 @@ public class TypeChecker extends Visitor<Void> {
         this.expressionTypeChecker = new ExpressionTypeChecker(classHierarchy);
     }
 
+    public void checkMainClassErrors(ClassDeclaration mainClassDeclaration)
+    {
+        // error number 26
+        //todo: check if it works properly
+        if(mainClassDeclaration.getParentClassName() != null)
+        {
+            MainClassCantExtend exception = new MainClassCantExtend(mainClassDeclaration.getLine());
+            mainClassDeclaration.addError(exception);
+        }
+        // error number 28
+        if(mainClassDeclaration.getConstructor() == null)
+        {
+            NoConstructorInMainClass exception = new NoConstructorInMainClass(mainClassDeclaration);
+            mainClassDeclaration.addError(exception);
+        }
+        // error number 29
+        else if (!mainClassDeclaration.getConstructor().getArgs().isEmpty())
+        {
+            MainConstructorCantHaveArgs exception = new MainConstructorCantHaveArgs(mainClassDeclaration.getLine());
+            mainClassDeclaration.addError(exception);
+        }
+
+
+    }
+
+
     @Override
     public Void visit(Program program) {
+        boolean mainFound = false;
         SymbolTable.top = SymbolTable.root;
         for(ClassDeclaration classDeclaration : program.getClasses()) {
+            if(classDeclaration.getClassName().toString().equals("Main"))
+            {
+                mainFound = true;
+                checkMainClassErrors(classDeclaration);
+            }
             classDeclaration.accept(this);
+        }
+        if(!mainFound)
+        {
+            NoMainClass exception = new NoMainClass();
+            program.addError(exception);
         }
         return null;
     }
@@ -49,10 +85,20 @@ public class TypeChecker extends Visitor<Void> {
                     .getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), false);
             SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
 
+            // error number 27
+            if(classDeclaration.getParentClassName().toString().equals("Main"))
+            {
+                CannotExtendFromMainClass exception = new CannotExtendFromMainClass(classDeclaration.getLine());
+                classDeclaration.addError(exception);
+            }
+
+
+
             for(FieldDeclaration fieldDeclaration : classDeclaration.getFields()) {
                 fieldDeclaration.accept(this);
             }
             if(classDeclaration.getConstructor() != null) {
+
                 classDeclaration.getConstructor().accept(this);
             }
             for(MethodDeclaration methodDeclaration : classDeclaration.getMethods()) {
