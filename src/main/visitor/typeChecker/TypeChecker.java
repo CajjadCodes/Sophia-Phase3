@@ -91,8 +91,8 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(ClassDeclaration classDeclaration) {
         try {
-            //ClassSymbolTableItem classSymbolTableItem = (ClassSymbolTableItem) SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), false);
-            //SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
+            ClassSymbolTableItem classSymbolTableItem = (ClassSymbolTableItem) SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), false);
+            SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
             // error number 27
             if(classDeclaration.getParentClassName() != null) {
                 if(classDeclaration.getParentClassName().toString().equals("Identifier_Main")) {
@@ -115,7 +115,7 @@ public class TypeChecker extends Visitor<Void> {
             for(MethodDeclaration methodDeclaration : classDeclaration.getMethods()) {
                 methodDeclaration.accept(this);
             }
-            //SymbolTable.pop();
+            SymbolTable.pop();
         } catch (Exception e) {}
         return null;
     }
@@ -130,9 +130,9 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(MethodDeclaration methodDeclaration) {
         try {
             returnFound = false;
-            //MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top
-            //        .getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), true);
-            //SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
+            MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top
+                    .getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), true);
+            SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
             currentMethodReturnedType = methodDeclaration.getReturnType();
             for(VarDeclaration varDeclaration : methodDeclaration.getArgs()) {
                 varDeclaration.accept(this);
@@ -153,7 +153,7 @@ public class TypeChecker extends Visitor<Void> {
                 }
             }
 
-            //SymbolTable.pop();
+            SymbolTable.pop();
             currentMethodReturnedType = null;
             returnFound = false;
         } catch (Exception ex) {}
