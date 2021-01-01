@@ -16,6 +16,7 @@ import main.ast.types.NullType;
 import main.ast.types.list.ListNameType;
 import main.ast.types.list.ListType;
 import main.ast.types.single.BoolType;
+import main.ast.types.single.ClassType;
 import main.ast.types.single.IntType;
 import main.ast.types.single.StringType;
 import main.compileErrorException.typeErrors.*;
@@ -170,6 +171,7 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(VarDeclaration varDeclaration) {
         //TODO: check to see if it works properly
         //error number 11
+
         Type returnedType = varDeclaration.getType();
         if(returnedType instanceof ListType) {
             if(((ListType) returnedType).getElementsTypes().isEmpty()) {
@@ -191,6 +193,17 @@ public class TypeChecker extends Visitor<Void> {
                         }
                     }
                 }
+            }
+        }
+        else if (returnedType instanceof ClassType) {
+            ClassType returnedClassType = (ClassType) returnedType;
+            try {
+                SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY +
+                        ((ClassType) returnedType).getClassName().getName(), true);
+            } catch (ItemNotFoundException err) {
+                ClassNotDeclared exception = new ClassNotDeclared(varDeclaration.getLine(),
+                        ((ClassType) returnedType).getClassName().getName());
+                varDeclaration.addError(exception);
             }
         }
         return null;
