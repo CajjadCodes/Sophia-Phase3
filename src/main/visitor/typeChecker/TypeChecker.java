@@ -11,6 +11,7 @@ import main.ast.nodes.statement.loop.BreakStmt;
 import main.ast.nodes.statement.loop.ContinueStmt;
 import main.ast.nodes.statement.loop.ForStmt;
 import main.ast.nodes.statement.loop.ForeachStmt;
+import main.ast.types.NoType;
 import main.ast.types.list.ListNameType;
 import main.ast.types.list.ListType;
 import main.ast.types.single.BoolType;
@@ -20,6 +21,7 @@ import main.compileErrorException.typeErrors.*;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.ClassSymbolTableItem;
+import main.symbolTable.items.LocalVariableSymbolTableItem;
 import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
 import main.visitor.Visitor;
@@ -150,6 +152,14 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(VarDeclaration varDeclaration) {
+        //TODO: check to see if it works properly
+        //error number 11
+        varDeclaration.accept(this);
+        Type varType = varDeclaration.getType();
+        if(varType instanceof ListType)
+        {
+
+        }
         return null;
     }
 
@@ -225,21 +235,53 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(ForeachStmt foreachStmt) {
         loopDepthCount += 1;
+        //TODO: is this necessary?
+        //foreachStmt.getVariable().accept(this);
         Type returnedType = foreachStmt.getList().accept(this.expressionTypeChecker);
 
         //error number 19
-        if(!(returnedType instanceof ListType))
+        if(!(returnedType instanceof ListType || returnedType instanceof NoType))
         {
             ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(foreachStmt.getLine());
             foreachStmt.addError(exception);
         }
-        else
+        else if(!(returnedType instanceof NoType))
         {
-
-            Type baseType =  ((ListType) returnedType).getElementsTypes().get(0).getType();
+            //error number 20
+            Type tempType = null;
+            boolean typeSet = false;
             for(ListNameType type:((ListType) returnedType).getElementsTypes())
             {
+                if(!(type.getType() instanceof NoType) && !(typeSet))
+                {
+                    tempType = type.getType();
+                    typeSet = true;
+                }
+                else
+                {
+                    if(!(type.getType() == tempType))
+                    {
+                        ForeachListElementsNotSameType exception = new ForeachListElementsNotSameType(foreachStmt.getLine());
+                        foreachStmt.addError(exception);
 
+                    }
+                }
+            }
+
+            //error number 21
+            //TODO: its probably super buggy, heavy check it
+            try
+            {
+                Type baseType =  ((ListType) returnedType).getElementsTypes().get(0).getType();
+                if (!(((LocalVariableSymbolTableItem)
+                        (SymbolTable.root.getItem(foreachStmt.getVariable().toString(), false))).getType() == baseType))
+                {
+                    ForeachVarNotMatchList exception = new ForeachVarNotMatchList(foreachStmt);
+                    foreachStmt.addError(exception);
+                }
+            }
+            catch (ItemNotFoundException ex)
+            { //TODO: do something
             }
         }
 
@@ -248,6 +290,7 @@ public class TypeChecker extends Visitor<Void> {
         loopDepthCount -= 1;
         return null;
     }
+
 
     @Override
     public Void visit(ForStmt forStmt) {
