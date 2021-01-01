@@ -179,4 +179,61 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     public Type visit(StringValue stringValue) {
         return new StringType();
     }
+
+    public boolean isFirstTypeSubtypeOf(Type first, Type second) {
+        if (first instanceof NoType) {
+            return true;
+        }
+        else if (((first instanceof BoolType) && (second instanceof BoolType))
+                || ((first instanceof IntType) && (second instanceof IntType))
+                || ((first instanceof StringType) && (second instanceof StringType))) {
+            return true;
+        }
+        else if ((first instanceof FptrType) && (second instanceof FptrType)) {
+            FptrType firstFptr = (FptrType) first;
+            FptrType secondFptr = (FptrType) second;
+            if (this.isFirstTypeSubtypeOf(firstFptr.getReturnType(), secondFptr.getReturnType())) {
+                if (firstFptr.getArgumentsTypes().size() != secondFptr.getArgumentsTypes().size()) {
+                    return false;
+                }
+                for (int i = 0; i < firstFptr.getArgumentsTypes().size(); i++) {
+                    if (!this.isFirstTypeSubtypeOf(secondFptr.getArgumentsTypes().get(i),
+                            firstFptr.getArgumentsTypes().get(i))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        else if ((first instanceof ListType) && (second instanceof ListType)) {
+            ListType firstList = (ListType) first;
+            ListType secondList = (ListType) second;
+            if (firstList.getElementsTypes().size() != secondList.getElementsTypes().size()) {
+                return false;
+            }
+            for (int i = 0; i < firstList.getElementsTypes().size(); i++) {
+                if (!this.isFirstTypeSubtypeOf(firstList.getElementsTypes().get(i).getType(),
+                        secondList.getElementsTypes().get(i).getType())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        else if ((first instanceof ClassType) && (second instanceof ClassType)) {
+            ClassType firstClass = (ClassType) first;
+            ClassType secondClass = (ClassType) second;
+            if (classHierarchy.isSecondNodeAncestorOf(
+                    firstClass.getClassName().getName(),
+                    secondClass.getClassName().getName())) {
+                return true;
+            }
+            if (firstClass.getClassName().getName().equals(secondClass.getClassName().getName())) {
+                return true;
+            }
+        }
+        else if ((first instanceof NullType) && ((second instanceof ClassType) || (second instanceof FptrType))) {
+            return true;
+        }
+        return false;
+    }
 }
