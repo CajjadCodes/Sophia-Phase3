@@ -12,6 +12,7 @@ import main.ast.nodes.statement.loop.ContinueStmt;
 import main.ast.nodes.statement.loop.ForStmt;
 import main.ast.nodes.statement.loop.ForeachStmt;
 import main.ast.types.NoType;
+import main.ast.types.NullType;
 import main.ast.types.list.ListNameType;
 import main.ast.types.list.ListType;
 import main.ast.types.single.BoolType;
@@ -27,6 +28,7 @@ import main.symbolTable.utils.graph.Graph;
 import main.visitor.Visitor;
 import main.ast.types.Type;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 public class TypeChecker extends Visitor<Void> {
@@ -141,6 +143,7 @@ public class TypeChecker extends Visitor<Void> {
             SymbolTable.pop();
         } catch (ItemNotFoundException ignored) {}
 
+
         return null;
     }
 
@@ -161,6 +164,27 @@ public class TypeChecker extends Visitor<Void> {
             {
                 ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(varDeclaration.getLine());
                 varDeclaration.addError(exception);
+            }
+            //error number 18
+            else
+            {
+                ArrayList <String> identifiers = new ArrayList<String>();
+                for(ListNameType temp: ((ListType) returnedType).getElementsTypes())
+                {
+                    if(!(temp.getName().toString() == ""))
+                    {
+                        if(identifiers.contains(temp.getName().toString()))
+                        {
+                            DuplicateListId exception = new DuplicateListId(varDeclaration.getLine());
+                            varDeclaration.addError(exception);
+                            break;
+                        }
+                        else
+                        {
+                            identifiers.add(temp.getName().toString());
+                        }
+                    }
+                }
             }
         }
         return null;
