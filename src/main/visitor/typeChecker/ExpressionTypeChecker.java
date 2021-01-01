@@ -33,7 +33,9 @@ import java.util.Set;
 
 
 public class ExpressionTypeChecker extends Visitor<Type> {
+    public static int indexingDepthForLvalueViolation = 0;
     private final Graph<String> classHierarchy;
+
 
     public ExpressionTypeChecker(Graph<String> classHierarchy) {
         this.classHierarchy = classHierarchy;
@@ -41,6 +43,9 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(BinaryExpression binaryExpression) {
+        if (indexingDepthForLvalueViolation <= 0) {
+            TypeChecker.isViolatingLvalue = true;
+        }
         boolean foundOperandTypeError = false;
         Type firstOperandType = binaryExpression.getFirstOperand().accept(this);
         Type secondOperandType = binaryExpression.getSecondOperand().accept(this);
@@ -126,9 +131,16 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(UnaryExpression unaryExpression) {
+        if (indexingDepthForLvalueViolation <= 0) {
+            TypeChecker.isViolatingLvalue = true;
+        }
         Type operandType = unaryExpression.getOperand().accept(this);
         if (operandType instanceof NoType) {
             return new NoType();
+        }
+        if (unaryExpression.getOperand() instanceof IntValue) {
+            TypeChecker.isViolatingLvalue = true;
+            // maybe even return NoType for 3++
         }
         if ((unaryExpression.getOperator() == UnaryOperator.minus)
             || (unaryExpression.getOperator() == UnaryOperator.preinc)
@@ -275,8 +287,10 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(ListAccessByIndex listAccessByIndex) {
+        indexingDepthForLvalueViolation++;
         Type instanceType = listAccessByIndex.getInstance().accept(this);
         Type indexType = listAccessByIndex.getIndex().accept(this);
+        indexingDepthForLvalueViolation--;
         if ((instanceType instanceof NoType) || (indexType instanceof NoType)) {
             return new NoType();
         }
@@ -326,6 +340,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(MethodCall methodCall) {
+        TypeChecker.isViolatingLvalue = true;
         Type instanceType = methodCall.getInstance().accept(this);
         if (instanceType instanceof NoType) {
             return new NoType();
@@ -357,6 +372,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(NewClassInstance newClassInstance) {
+        TypeChecker.isViolatingLvalue = true;
         try {
             SymbolTable.top
                     .getItem(ClassSymbolTableItem.START_KEY
@@ -377,6 +393,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(ListValue listValue) {
+        TypeChecker.isViolatingLvalue = true;
         ListType listType = new ListType();
         for (Expression expression : listValue.getElements()) {
             Type elementType = expression.accept(this);
@@ -387,21 +404,27 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(NullValue nullValue) {
+        TypeChecker.isViolatingLvalue = true;
         return new NullType();
     }
 
     @Override
     public Type visit(IntValue intValue) {
+        if (indexingDepthForLvalueViolation <= 0) {
+            TypeChecker.isViolatingLvalue = true;
+        }
         return new IntType();
     }
 
     @Override
     public Type visit(BoolValue boolValue) {
+        TypeChecker.isViolatingLvalue = true;
         return new BoolType();
     }
 
     @Override
     public Type visit(StringValue stringValue) {
+        TypeChecker.isViolatingLvalue = true;
         return new StringType();
     }
 
