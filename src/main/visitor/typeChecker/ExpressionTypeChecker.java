@@ -36,7 +36,6 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(BinaryExpression binaryExpression) {
-        //TODO
         return null;
     }
 
@@ -48,8 +47,54 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(ObjectOrListMemberAccess objectOrListMemberAccess) {
-        //TODO
-        return null;
+        Type instanceType = objectOrListMemberAccess.getInstance().accept(this);
+        if (instanceType instanceof NoType) {
+            return new NoType();
+        }
+        else if (instanceType instanceof ClassType) {
+            ClassType instanceClassType = (ClassType) instanceType;
+            ClassSymbolTableItem classItem;
+            try {
+                classItem = (ClassSymbolTableItem) SymbolTable.root
+                        .getItem(ClassSymbolTableItem.START_KEY + instanceClassType.getClassName().getName(), true);
+            } catch (ItemNotFoundException ignored) {return new NoType();}
+            try {
+                MethodSymbolTableItem methodItem = (MethodSymbolTableItem) classItem.getClassSymbolTable()
+                        .getItem(MethodSymbolTableItem.START_KEY + objectOrListMemberAccess.getMemberName().getName(), true);
+                return new FptrType(methodItem.getArgTypes(), methodItem.getReturnType());
+            } catch (ItemNotFoundException err) {
+                try {
+                    FieldSymbolTableItem fieldItem = (FieldSymbolTableItem)  classItem.getClassSymbolTable()
+                            .getItem(FieldSymbolTableItem.START_KEY + objectOrListMemberAccess.getMemberName().getName(), true);
+                    return fieldItem.getType();
+                } catch (ItemNotFoundException err2) {
+                    // error number 3
+                    MemberNotAvailableInClass exception = new MemberNotAvailableInClass(objectOrListMemberAccess.getLine(),
+                            objectOrListMemberAccess.getMemberName().getName(), instanceClassType.getClassName().getName());
+                    objectOrListMemberAccess.addError(exception);
+                    return new NoType();
+                }
+            }
+        }
+        else if(instanceType instanceof ListType) {
+            ListType instanceListType = (ListType) instanceType;
+            for (ListNameType elementType : instanceListType.getElementsTypes()) {
+                if (elementType.getName().getName().equals(objectOrListMemberAccess.getMemberName().getName())) {
+                    return elementType.getType();
+                }
+            }
+            // error number 24
+            ListMemberNotFound exception = new ListMemberNotFound(objectOrListMemberAccess.getLine(),
+                    objectOrListMemberAccess.getMemberName().getName());
+            objectOrListMemberAccess.addError(exception);
+            return new NoType();
+        }
+        else { // error number 30
+            MemberAccessOnNoneObjOrListType exception = new MemberAccessOnNoneObjOrListType(objectOrListMemberAccess.getLine());
+            objectOrListMemberAccess.addError(exception);
+            return new NoType();
+        }
+
     }
 
     @Override
@@ -72,7 +117,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
         //check for class
         try {
-            ClassSymbolTableItem classItem = (ClassSymbolTableItem) SymbolTable.top
+            ClassSymbolTableItem classItem = (ClassSymbolTableItem) SymbolTable.root
                     .getItem(ClassSymbolTableItem.START_KEY + identifier.getName(), true);
             return new ClassType(classItem.getClassDeclaration().getClassName());
 
