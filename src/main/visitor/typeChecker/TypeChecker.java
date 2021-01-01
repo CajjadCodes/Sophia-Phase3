@@ -132,7 +132,8 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(MethodDeclaration methodDeclaration) {
         try {
             returnFound = false;
-            MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top.getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), false);
+            MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top
+                    .getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), true);
             SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
             currentMethodReturnedType = methodDeclaration.getReturnType();
             for(VarDeclaration varDeclaration : methodDeclaration.getArgs()) {

@@ -1,6 +1,8 @@
 package main.visitor.typeChecker;
 
 import main.ast.nodes.expression.*;
+import main.ast.nodes.expression.operators.BinaryOperator;
+import main.ast.nodes.expression.operators.UnaryOperator;
 import main.ast.nodes.expression.values.ListValue;
 import main.ast.nodes.expression.values.NullValue;
 import main.ast.nodes.expression.values.primitive.BoolValue;
@@ -36,13 +38,122 @@ public class ExpressionTypeChecker extends Visitor<Type> {
 
     @Override
     public Type visit(BinaryExpression binaryExpression) {
-        return null;
+        boolean foundOperandTypeError = false;
+        Type firstOperandType = binaryExpression.getFirstOperand().accept(this);
+        Type secondOperandType = binaryExpression.getSecondOperand().accept(this);
+        if ((firstOperandType instanceof NoType) && (secondOperandType instanceof NoType)) {
+            return new NoType();
+        }
+        if ((binaryExpression.getBinaryOperator() == BinaryOperator.eq)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.neq)) {
+            if (firstOperandType instanceof NoType) {
+                if (!(secondOperandType instanceof ListType)) {
+                    return new BoolType();
+                }
+                foundOperandTypeError = true;
+            }
+            else if (secondOperandType instanceof NoType) {
+                if (!(firstOperandType instanceof ListType)) {
+                    return firstOperandType;
+                }
+                foundOperandTypeError = true;
+            }
+            else {
+                if ((firstOperandType instanceof NullType) || (secondOperandType instanceof NullType)) {
+                    if ((firstOperandType instanceof NullType) && (secondOperandType instanceof NullType)) {
+                        return new BoolType();
+                    }
+                    else if (!(firstOperandType instanceof FptrType) && !(secondOperandType instanceof FptrType)
+                        && !(firstOperandType instanceof ClassType) && !(secondOperandType instanceof ClassType)) {
+                        foundOperandTypeError = true;
+                    }
+                    else {
+                        return new BoolType();
+                    }
+                }
+                else {
+                    if (((firstOperandType instanceof FptrType) && (secondOperandType instanceof FptrType))
+                        || ((firstOperandType instanceof BoolType) && (secondOperandType instanceof BoolType))
+                        || ((firstOperandType instanceof IntType) && (secondOperandType instanceof IntType))
+                        || ((firstOperandType instanceof StringType) && (secondOperandType instanceof StringType))
+                        || ((firstOperandType instanceof ClassType) && (secondOperandType instanceof ClassType))) {
+                        return new BoolType();
+                    }
+                    else {
+                        foundOperandTypeError = true;
+                    }
+                }
+            }
+        }
+        else if ((binaryExpression.getBinaryOperator() == BinaryOperator.mult)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.div)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.mod)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.add)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.sub)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.gt)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.lt)) {
+            if ((firstOperandType instanceof IntType) && (secondOperandType instanceof IntType)) {
+                return new IntType();
+            }
+            else {
+                foundOperandTypeError = true;
+            }
+        }
+        else if ((binaryExpression.getBinaryOperator() == BinaryOperator.and)
+            || (binaryExpression.getBinaryOperator() == BinaryOperator.or)) {
+            if ((firstOperandType instanceof BoolType) && (secondOperandType instanceof BoolType)) {
+                return new BoolType();
+            }
+            else {
+                foundOperandTypeError = true;
+            }
+        }
+        else {
+            foundOperandTypeError = true;
+        }
+        // error number 4
+        if (foundOperandTypeError) {
+            UnsupportedOperandType exception = new UnsupportedOperandType(binaryExpression.getLine(),
+                    binaryExpression.getBinaryOperator().name());
+            binaryExpression.addError(exception);
+            return new NoType();
+        }
+        return new NoType();
     }
 
     @Override
     public Type visit(UnaryExpression unaryExpression) {
-        //TODO
-        return null;
+        Type operandType = unaryExpression.getOperand().accept(this);
+        if (operandType instanceof NoType) {
+            return new NoType();
+        }
+        if ((unaryExpression.getOperator() == UnaryOperator.minus)
+            || (unaryExpression.getOperator() == UnaryOperator.preinc)
+            || (unaryExpression.getOperator() == UnaryOperator.predec)
+            || (unaryExpression.getOperator() == UnaryOperator.postinc)
+            || (unaryExpression.getOperator() == UnaryOperator.postdec)) {
+            if (operandType instanceof IntType) {
+                return new IntType();
+            }
+            else {
+                //error number 4
+                UnsupportedOperandType exception = new UnsupportedOperandType(unaryExpression.getLine(),
+                        unaryExpression.getOperator().name());
+                unaryExpression.addError(exception);
+            }
+        }
+        else if (unaryExpression.getOperator() == UnaryOperator.not) {
+            if (operandType instanceof BoolType) {
+                return new BoolType();
+            }
+            else {
+                //error number 4
+                UnsupportedOperandType exception = new UnsupportedOperandType(unaryExpression.getLine(),
+                        unaryExpression.getOperator().name());
+                unaryExpression.addError(exception);
+            }
+        }
+        return new NoType();
     }
 
     @Override
