@@ -31,6 +31,7 @@ public class TypeChecker extends Visitor<Void> {
     private final Graph<String> classHierarchy;
     private final ExpressionTypeChecker expressionTypeChecker;
     public static ClassDeclaration currentClass = null;
+    public static int loopDepthCount = 0;
 
     public TypeChecker(Graph<String> classHierarchy) {
         this.classHierarchy = classHierarchy;
@@ -203,18 +204,29 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(BreakStmt breakStmt) {
+        if(loopDepthCount <= 0)
+        {
+            ContinueBreakNotInLoop exception = new ContinueBreakNotInLoop(breakStmt.getLine(), 0);
+            breakStmt.addError(exception);
+        }
         return null;
     }
 
     @Override
     public Void visit(ContinueStmt continueStmt) {
-
+        if(loopDepthCount <= 0)
+        {
+            ContinueBreakNotInLoop exception = new ContinueBreakNotInLoop(continueStmt.getLine(), 1);
+            continueStmt.addError(exception);
+        }
         return null;
     }
 
     @Override
     public Void visit(ForeachStmt foreachStmt) {
+        loopDepthCount += 1;
         Type returnedType = foreachStmt.getList().accept(this.expressionTypeChecker);
+
         //error number 19
         if(!(returnedType instanceof ListType))
         {
@@ -224,14 +236,22 @@ public class TypeChecker extends Visitor<Void> {
         else
         {
 
+            Type baseType =  ((ListType) returnedType).getElementsTypes().get(0).getType();
+            for(ListNameType type:((ListType) returnedType).getElementsTypes())
+            {
+
+            }
         }
 
+
         foreachStmt.getBody().accept(this);
+        loopDepthCount -= 1;
         return null;
     }
 
     @Override
     public Void visit(ForStmt forStmt) {
+        loopDepthCount +=1;
         forStmt.getInitialize().accept(this);
         Type conditionType = forStmt.getCondition().accept(this.expressionTypeChecker);
         if (!(conditionType instanceof BoolType)) { //Error 5
@@ -241,6 +261,7 @@ public class TypeChecker extends Visitor<Void> {
         forStmt.getUpdate().accept(this);
 
         forStmt.getBody().accept(this);
+        loopDepthCount -=1;
         return null;
     }
 
