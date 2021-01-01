@@ -26,7 +26,10 @@ import main.symbolTable.items.FieldSymbolTableItem;
 import main.symbolTable.items.LocalVariableSymbolTableItem;
 import main.symbolTable.items.MethodSymbolTableItem;
 import main.symbolTable.utils.graph.Graph;
+import main.symbolTable.utils.graph.exceptions.GraphDoesNotContainNodeException;
 import main.visitor.Visitor;
+
+import java.util.Set;
 
 
 public class ExpressionTypeChecker extends Visitor<Type> {
@@ -165,27 +168,51 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         else if (instanceType instanceof ClassType) {
             ClassType instanceClassType = (ClassType) instanceType;
             ClassSymbolTableItem classItem;
+            Set<String> classFathers;
+            //find class
             try {
                 classItem = (ClassSymbolTableItem) SymbolTable.root
                         .getItem(ClassSymbolTableItem.START_KEY + instanceClassType.getClassName().getName(), true);
-            } catch (ItemNotFoundException ignored) {return new NoType();}
+                classFathers = (Set<String>) classHierarchy.getParentsOfNode(instanceClassType.getClassName().getName());
+            } catch (ItemNotFoundException | GraphDoesNotContainNodeException err) {return new NoType();}
+
+            //search in class
             try {
                 MethodSymbolTableItem methodItem = (MethodSymbolTableItem) classItem.getClassSymbolTable()
                         .getItem(MethodSymbolTableItem.START_KEY + objectOrListMemberAccess.getMemberName().getName(), true);
                 return new FptrType(methodItem.getArgTypes(), methodItem.getReturnType());
             } catch (ItemNotFoundException err) {
                 try {
-                    FieldSymbolTableItem fieldItem = (FieldSymbolTableItem)  classItem.getClassSymbolTable()
+                    FieldSymbolTableItem fieldItem = (FieldSymbolTableItem) classItem.getClassSymbolTable()
                             .getItem(FieldSymbolTableItem.START_KEY + objectOrListMemberAccess.getMemberName().getName(), true);
                     return fieldItem.getType();
-                } catch (ItemNotFoundException err2) {
-                    // error number 3
-                    MemberNotAvailableInClass exception = new MemberNotAvailableInClass(objectOrListMemberAccess.getLine(),
-                            objectOrListMemberAccess.getMemberName().getName(), instanceClassType.getClassName().getName());
-                    objectOrListMemberAccess.addError(exception);
-                    return new NoType();
+                } catch (ItemNotFoundException ignored) {}
+            }
+
+            //search in class' ancestors
+            for (String fatherName : classFathers) {
+                ClassSymbolTableItem fatherClass;
+                try {
+                    fatherClass = (ClassSymbolTableItem) SymbolTable.root
+                            .getItem(ClassSymbolTableItem.START_KEY + fatherName, true);
+                } catch (ItemNotFoundException ignored) {break;}
+                try {
+                    MethodSymbolTableItem methodItem = (MethodSymbolTableItem) fatherClass.getClassSymbolTable()
+                            .getItem(MethodSymbolTableItem.START_KEY + objectOrListMemberAccess.getMemberName().getName(), true);
+                    return new FptrType(methodItem.getArgTypes(), methodItem.getReturnType());
+                } catch (ItemNotFoundException err1) {
+                    try {
+                        FieldSymbolTableItem fieldItem = (FieldSymbolTableItem)  fatherClass.getClassSymbolTable()
+                                .getItem(FieldSymbolTableItem.START_KEY + objectOrListMemberAccess.getMemberName().getName(), true);
+                        return fieldItem.getType();
+                    } catch (ItemNotFoundException ignored) {}
                 }
             }
+            // error number 3
+            MemberNotAvailableInClass exception = new MemberNotAvailableInClass(objectOrListMemberAccess.getLine(),
+                    objectOrListMemberAccess.getMemberName().getName(), instanceClassType.getClassName().getName());
+            objectOrListMemberAccess.addError(exception);
+            return new NoType();
         }
         else if(instanceType instanceof ListType) {
             ListType instanceListType = (ListType) instanceType;
@@ -205,7 +232,6 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             objectOrListMemberAccess.addError(exception);
             return new NoType();
         }
-
     }
 
     @Override
