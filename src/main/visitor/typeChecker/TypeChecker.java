@@ -91,7 +91,7 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(ClassDeclaration classDeclaration) {
         try {
-            ClassSymbolTableItem classSymbolTableItem = (ClassSymbolTableItem) SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), false);
+            ClassSymbolTableItem classSymbolTableItem = (ClassSymbolTableItem) SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), true);
             SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
             // error number 27
             if(classDeclaration.getParentClassName() != null) {
@@ -228,12 +228,10 @@ public class TypeChecker extends Visitor<Void> {
             ConditionNotBool exception = new ConditionNotBool(conditionalStmt.getLine());
             conditionalStmt.addError(exception);
         }
-        if(conditionalStmt.getThenBody() != null)
-        {
+        if(conditionalStmt.getThenBody() != null) {
             conditionalStmt.getThenBody().accept(this);
         }
-        if(conditionalStmt.getElseBody() != null)
-        {
+        if(conditionalStmt.getElseBody() != null) {
             conditionalStmt.getElseBody().accept(this);
         }
         return null;
