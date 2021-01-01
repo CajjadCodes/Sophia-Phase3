@@ -154,11 +154,14 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(VarDeclaration varDeclaration) {
         //TODO: check to see if it works properly
         //error number 11
-        varDeclaration.accept(this);
-        Type varType = varDeclaration.getType();
-        if(varType instanceof ListType)
+        Type returnedType = varDeclaration.accept(this.expressionTypeChecker); //is it necessary?
+        if(returnedType instanceof ListType)
         {
-
+            if(((ListType) returnedType).getElementsTypes().size() == 0)
+            {
+                ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(varDeclaration.getLine());
+                varDeclaration.addError(exception);
+            }
         }
         return null;
     }
@@ -236,7 +239,7 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(ForeachStmt foreachStmt) {
         loopDepthCount += 1;
         //TODO: is this necessary?
-        //foreachStmt.getVariable().accept(this);
+        foreachStmt.getVariable().accept(this.expressionTypeChecker);
         Type returnedType = foreachStmt.getList().accept(this.expressionTypeChecker);
 
         //error number 19
