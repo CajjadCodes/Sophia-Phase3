@@ -253,10 +253,6 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(MethodCallStmt methodCallStmt) {
         Type returnedType = methodCallStmt.getMethodCall().accept(this.expressionTypeChecker);
-        if(returnedType instanceof NoType) {
-            CallOnNoneFptrType exception = new CallOnNoneFptrType(methodCallStmt.getLine());
-            methodCallStmt.addError(exception);
-        }
         return null;
     }
 
