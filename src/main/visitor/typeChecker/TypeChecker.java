@@ -297,6 +297,9 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(PrintStmt print) {
         Type exprType = print.getArg().accept(this.expressionTypeChecker);
+        if (exprType instanceof NoType) {
+            return null;
+        }
         if (!(exprType instanceof IntType) && !(exprType instanceof BoolType) && !(exprType instanceof StringType)) { //Error 10
             UnsupportedTypeForPrint exception = new UnsupportedTypeForPrint(print.getLine());
             print.addError(exception);
