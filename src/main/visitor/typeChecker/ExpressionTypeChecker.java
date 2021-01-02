@@ -140,9 +140,19 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         if (operandType instanceof NoType) {
             return new NoType();
         }
-        if (unaryExpression.getOperand() instanceof IntValue) {
-            TypeChecker.isViolatingLvalue = true;
-            // maybe even return NoType for 3++
+        // error number 7
+        if((unaryExpression.getOperator() == UnaryOperator.preinc)
+                || (unaryExpression.getOperator() == UnaryOperator.predec)
+                || (unaryExpression.getOperator() == UnaryOperator.postinc)
+                || (unaryExpression.getOperator() == UnaryOperator.postdec)) {
+            if (unaryExpression.getOperand() instanceof IntValue) {
+                TypeChecker.isViolatingLvalue = true;
+                IncDecOperandNotLvalue exception = new IncDecOperandNotLvalue(unaryExpression.getLine(),
+                        unaryExpression.getOperator().name());
+                unaryExpression.addError(exception);
+                return new NoType();
+            }
+
         }
         if ((unaryExpression.getOperator() == UnaryOperator.minus)
             || (unaryExpression.getOperator() == UnaryOperator.preinc)
