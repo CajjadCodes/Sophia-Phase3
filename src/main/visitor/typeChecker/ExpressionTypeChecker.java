@@ -1,5 +1,6 @@
 package main.visitor.typeChecker;
 
+import main.ast.nodes.declaration.variableDec.VarDeclaration;
 import main.ast.nodes.expression.*;
 import main.ast.nodes.expression.operators.BinaryOperator;
 import main.ast.nodes.expression.operators.UnaryOperator;
@@ -29,6 +30,7 @@ import main.symbolTable.utils.graph.Graph;
 import main.symbolTable.utils.graph.exceptions.GraphDoesNotContainNodeException;
 import main.visitor.Visitor;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 
@@ -374,9 +376,32 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     public Type visit(NewClassInstance newClassInstance) {
         TypeChecker.isViolatingLvalue = true;
         try {
-            SymbolTable.top
-                    .getItem(ClassSymbolTableItem.START_KEY
-                            + newClassInstance.getClassType().getClassName().getName(), true);
+            ClassSymbolTableItem classItem = (ClassSymbolTableItem) SymbolTable.top
+                    .getItem(ClassSymbolTableItem.START_KEY + newClassInstance.getClassType().getClassName().getName(), true);
+            ArrayList<VarDeclaration> constructorArgs = classItem.getClassDeclaration().getConstructor().getArgs();
+            ArrayList<Type> calledArgsTypes = new ArrayList<>();
+            for (int i = 0; i < newClassInstance.getArgs().size(); i++) {
+                calledArgsTypes.add(newClassInstance.getArgs().get(i).accept(this));
+            }
+            ArrayList<Type> constructorArgType = new ArrayList<>();
+            for (VarDeclaration arg : constructorArgs) {
+                constructorArgType.add(arg.getType());
+            }
+            // error number 16
+            if (calledArgsTypes.size() != constructorArgType.size()) {
+                ConstructorArgsNotMatchDefinition exception = new ConstructorArgsNotMatchDefinition(newClassInstance);
+                newClassInstance.addError(exception);
+                return new NoType();
+            }
+            else {
+                for (int i = 0; i < calledArgsTypes.size(); i++) {
+                    if (!this.isFirstTypeSubtypeOf(calledArgsTypes.get(i), constructorArgType.get(i))) {
+                        ConstructorArgsNotMatchDefinition exception = new ConstructorArgsNotMatchDefinition(newClassInstance);
+                        newClassInstance.addError(exception);
+                        return new NoType();
+                    }
+                }
+            }
         } catch (ItemNotFoundException exp) { // error number 2
             ClassNotDeclared exception = new ClassNotDeclared(newClassInstance.getLine(),
                     newClassInstance.getClassType().getClassName().getName());
