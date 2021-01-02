@@ -333,7 +333,8 @@ public class TypeChecker extends Visitor<Void> {
             //TODO: its probably super buggy, heavy check it
             try {
                 Type baseType =  ((ListType) returnedType).getElementsTypes().get(0).getType();
-                if ( varType != baseType) {
+                if (!varType.toString().equals(baseType.toString()))
+                {
                     ForeachVarNotMatchList exception = new ForeachVarNotMatchList(foreachStmt);
                     foreachStmt.addError(exception);
                 }
