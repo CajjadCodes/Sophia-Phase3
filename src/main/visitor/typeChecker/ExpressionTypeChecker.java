@@ -119,7 +119,16 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             }
         }
         else if (binaryExpression.getBinaryOperator() == BinaryOperator.assign) {
-            if (!this.isFirstTypeSubtypeOf(secondOperandType, firstOperandType)) {
+            if (((binaryExpression.getFirstOperand() instanceof IntValue) && (binaryExpression.getSecondOperand() instanceof IntValue))
+                || ((binaryExpression.getFirstOperand() instanceof BoolValue) && (binaryExpression.getSecondOperand() instanceof BoolValue))
+                || ((binaryExpression.getFirstOperand() instanceof StringValue) && (binaryExpression.getSecondOperand() instanceof StringValue))
+                || ((binaryExpression.getFirstOperand() instanceof ListValue) && (binaryExpression.getSecondOperand() instanceof ListValue))
+                || ((binaryExpression.getFirstOperand() instanceof NullValue) && (binaryExpression.getSecondOperand() instanceof NullValue))) {
+                LeftSideNotLvalue exception = new LeftSideNotLvalue(binaryExpression.getLine());
+                binaryExpression.addError(exception);
+                return new NoType();
+            }
+            else if (!this.isFirstTypeSubtypeOf(secondOperandType, firstOperandType)) {
                 foundOperandTypeError = true;
             }
         }
@@ -150,7 +159,9 @@ public class ExpressionTypeChecker extends Visitor<Type> {
                 || (unaryExpression.getOperator() == UnaryOperator.predec)
                 || (unaryExpression.getOperator() == UnaryOperator.postinc)
                 || (unaryExpression.getOperator() == UnaryOperator.postdec)) {
-            if (unaryExpression.getOperand() instanceof IntValue) {
+            if ((unaryExpression.getOperand() instanceof IntValue)
+                || (unaryExpression.getOperand() instanceof BinaryExpression)
+                || (unaryExpression.getOperand() instanceof MethodCall)) {
                 TypeChecker.isViolatingLvalue = true;
                 IncDecOperandNotLvalue exception = new IncDecOperandNotLvalue(unaryExpression.getLine(),
                         unaryExpression.getOperator().name());
