@@ -172,7 +172,7 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(VarDeclaration varDeclaration) {
         //TODO: check to see if it works properly
         //error number 11
-        Type returnedType = varDeclaration.getType(); //is it necessary?
+        Type returnedType = varDeclaration.getType();
         if(returnedType instanceof ListType)
         {
             if(((ListType) returnedType).getElementsTypes().isEmpty())
@@ -232,8 +232,14 @@ public class TypeChecker extends Visitor<Void> {
             ConditionNotBool exception = new ConditionNotBool(conditionalStmt.getLine());
             conditionalStmt.addError(exception);
         }
-        conditionalStmt.getThenBody().accept(this);
-        conditionalStmt.getElseBody().accept(this);
+        if(conditionalStmt.getThenBody() != null)
+        {
+            conditionalStmt.getThenBody().accept(this);
+        }
+        if(conditionalStmt.getElseBody() != null)
+        {
+            conditionalStmt.getElseBody().accept(this);
+        }
         return null;
     }
 
@@ -300,7 +306,7 @@ public class TypeChecker extends Visitor<Void> {
         Type returnedType = foreachStmt.getList().accept(this.expressionTypeChecker);
 
         //error number 19
-        if(!(returnedType instanceof ListType || returnedType instanceof NoType))
+        if(!(returnedType instanceof ListType) || !(returnedType instanceof NoType))
         {
             ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(foreachStmt.getLine());
             foreachStmt.addError(exception);
@@ -341,7 +347,7 @@ public class TypeChecker extends Visitor<Void> {
                 }
             }
             catch (ItemNotFoundException ex)
-            { //TODO: do something
+            {
             }
         }
 
