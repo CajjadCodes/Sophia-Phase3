@@ -59,7 +59,7 @@ public class TypeChecker extends Visitor<Void> {
         }
         // error number 29
         else if (!mainClassDeclaration.getConstructor().getArgs().isEmpty()) {
-            MainConstructorCantHaveArgs exception = new MainConstructorCantHaveArgs(mainClassDeclaration.getLine());
+            MainConstructorCantHaveArgs exception = new MainConstructorCantHaveArgs(mainClassDeclaration.getConstructor().getLine());
             mainClassDeclaration.addError(exception);
         }
 
@@ -90,35 +90,34 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(ClassDeclaration classDeclaration) {
         try {
-            ClassSymbolTableItem classSymbolTableItem = (ClassSymbolTableItem) SymbolTable.top
-                    .getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), false);
-            SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
-
+            //ClassSymbolTableItem classSymbolTableItem = (ClassSymbolTableItem) SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY + classDeclaration.getClassName().getName(), false);
+            //SymbolTable.push(classSymbolTableItem.getClassSymbolTable());
             // error number 27
-            if(classDeclaration.getParentClassName().toString().equals("Main")) {
-                CannotExtendFromMainClass exception = new CannotExtendFromMainClass(classDeclaration.getLine());
-                classDeclaration.addError(exception);
+            if(classDeclaration.getParentClassName() != null)
+            {
+                if(classDeclaration.getParentClassName().toString().equals("Identifier_Main")) {
+                    CannotExtendFromMainClass exception = new CannotExtendFromMainClass(classDeclaration.getLine());
+                    classDeclaration.addError(exception);
+                }
             }
 
             for(FieldDeclaration fieldDeclaration : classDeclaration.getFields()) {
                 fieldDeclaration.accept(this);
             }
             if(classDeclaration.getConstructor() != null) {
-
                 //error number 17
                 if(!classDeclaration.getConstructor().getMethodName().toString().equals(classDeclaration.getClassName().toString()))
                 {
                     ConstructorNotSameNameAsClass exception = new ConstructorNotSameNameAsClass(classDeclaration.getConstructor().getLine());
                     classDeclaration.getConstructor().addError(exception);
                 }
-
                 classDeclaration.getConstructor().accept(this);
             }
             for(MethodDeclaration methodDeclaration : classDeclaration.getMethods()) {
                 methodDeclaration.accept(this);
             }
             SymbolTable.pop();
-        } catch (ItemNotFoundException ignored) {}
+        } catch (Exception e) {}
         return null;
     }
 
@@ -132,9 +131,9 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(MethodDeclaration methodDeclaration) {
         try {
             returnFound = false;
-            MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top
-                    .getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), true);
-            SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
+            //MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top
+            //        .getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), true);
+            //SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
             currentMethodReturnedType = methodDeclaration.getReturnType();
             for(VarDeclaration varDeclaration : methodDeclaration.getArgs()) {
                 varDeclaration.accept(this);
@@ -156,10 +155,10 @@ public class TypeChecker extends Visitor<Void> {
                 }
             }
 
-            SymbolTable.pop();
+            //SymbolTable.pop();
             currentMethodReturnedType = null;
             returnFound = false;
-        } catch (ItemNotFoundException ignored) {}
+        } catch (Exception ex) {}
         return null;
     }
 
@@ -176,7 +175,7 @@ public class TypeChecker extends Visitor<Void> {
         Type returnedType = varDeclaration.accept(this.expressionTypeChecker); //is it necessary?
         if(returnedType instanceof ListType)
         {
-            if(((ListType) returnedType).getElementsTypes().size() == 0)
+            if(((ListType) returnedType).getElementsTypes().isEmpty())
             {
                 ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(varDeclaration.getLine());
                 varDeclaration.addError(exception);
