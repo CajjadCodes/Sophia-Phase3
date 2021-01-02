@@ -116,7 +116,7 @@ public class TypeChecker extends Visitor<Void> {
             for(MethodDeclaration methodDeclaration : classDeclaration.getMethods()) {
                 methodDeclaration.accept(this);
             }
-            SymbolTable.pop();
+            //SymbolTable.pop();
         } catch (Exception e) {}
         return null;
     }
@@ -172,12 +172,12 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(VarDeclaration varDeclaration) {
         //TODO: check to see if it works properly
         //error number 11
-        Type returnedType = varDeclaration.accept(this.expressionTypeChecker); //is it necessary?
+        Type returnedType = varDeclaration.getType(); //is it necessary?
         if(returnedType instanceof ListType)
         {
             if(((ListType) returnedType).getElementsTypes().isEmpty())
             {
-                ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(varDeclaration.getLine());
+                CannotHaveEmptyList exception = new CannotHaveEmptyList(varDeclaration.getLine());
                 varDeclaration.addError(exception);
             }
             //error number 18
@@ -186,7 +186,7 @@ public class TypeChecker extends Visitor<Void> {
                 ArrayList <String> identifiers = new ArrayList<String>();
                 for(ListNameType temp: ((ListType) returnedType).getElementsTypes())
                 {
-                    if(!(temp.getName().toString() == ""))
+                    if(!temp.getName().toString().equals("Identifier_"))
                     {
                         if(identifiers.contains(temp.getName().toString()))
                         {
@@ -240,7 +240,7 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(PrintStmt print) {
-        Type exprType = print.accept(this.expressionTypeChecker);
+        Type exprType = print.getArg().accept(this.expressionTypeChecker);
         if (!(exprType instanceof IntType) && !(exprType instanceof BoolType) && !(exprType instanceof StringType)) { //Error 10
             UnsupportedTypeForPrint exception = new UnsupportedTypeForPrint(print.getLine());
             print.addError(exception);
