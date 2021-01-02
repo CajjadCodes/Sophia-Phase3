@@ -13,12 +13,14 @@ import main.ast.nodes.statement.loop.ForStmt;
 import main.ast.nodes.statement.loop.ForeachStmt;
 import main.ast.types.NoType;
 import main.ast.types.NullType;
+import main.ast.types.functionPointer.FptrType;
 import main.ast.types.list.ListNameType;
 import main.ast.types.list.ListType;
 import main.ast.types.single.BoolType;
 import main.ast.types.single.ClassType;
 import main.ast.types.single.IntType;
 import main.ast.types.single.StringType;
+import main.compileErrorException.CompileErrorException;
 import main.compileErrorException.typeErrors.*;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
@@ -100,8 +102,15 @@ public class TypeChecker extends Visitor<Void> {
                     CannotExtendFromMainClass exception = new CannotExtendFromMainClass(classDeclaration.getLine());
                     classDeclaration.addError(exception);
                 }
+                try {
+                    SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY +
+                            classDeclaration.getParentClassName().getName(), true);
+                } catch (ItemNotFoundException err) {
+                    ClassNotDeclared exception = new ClassNotDeclared(classDeclaration.getLine(),
+                            classDeclaration.getParentClassName().getName());
+                    classDeclaration.addError(exception);
+                }
             }
-
             for(FieldDeclaration fieldDeclaration : classDeclaration.getFields()) {
                 fieldDeclaration.accept(this);
             }
@@ -167,25 +176,23 @@ public class TypeChecker extends Visitor<Void> {
         return null;
     }
 
-    @Override
-    public Void visit(VarDeclaration varDeclaration) {
-        //TODO: check to see if it works properly
-        //error number 11
+    private ArrayList<CompileErrorException> checkVarDecType (Type inputType, int line) {
+        ArrayList<CompileErrorException> errors = new ArrayList<>();
 
-        Type returnedType = varDeclaration.getType();
-        if(returnedType instanceof ListType) {
-            if(((ListType) returnedType).getElementsTypes().isEmpty()) {
-                CannotHaveEmptyList exception = new CannotHaveEmptyList(varDeclaration.getLine());
-                varDeclaration.addError(exception);
+        if(inputType instanceof ListType) {
+            ListType inputListType = (ListType) inputType;
+            if(inputListType.getElementsTypes().isEmpty()) { //error number 11
+                CannotHaveEmptyList exception = new CannotHaveEmptyList(line);
+                errors.add(exception);
             }
-            //error number 18
             else {
+                //error number 18
                 ArrayList <String> identifiers = new ArrayList<String>();
-                for(ListNameType temp: ((ListType) returnedType).getElementsTypes()) {
+                for(ListNameType temp: inputListType.getElementsTypes()) {
                     if(!temp.getName().toString().equals("Identifier_")) {
                         if(identifiers.contains(temp.getName().toString())) {
-                            DuplicateListId exception = new DuplicateListId(varDeclaration.getLine());
-                            varDeclaration.addError(exception);
+                            DuplicateListId exception = new DuplicateListId(line);
+                            errors.add(exception);
                             break;
                         }
                         else {
@@ -193,19 +200,44 @@ public class TypeChecker extends Visitor<Void> {
                         }
                     }
                 }
+                // recursive check
+                for (ListNameType elementType : inputListType.getElementsTypes()) {
+                    errors.addAll(this.checkVarDecType(elementType.getType(), line));
+                }
             }
         }
-        else if (returnedType instanceof ClassType) {
-            ClassType returnedClassType = (ClassType) returnedType;
+
+        else if (inputType instanceof ClassType) {
+            ClassType inputClassType = (ClassType) inputType;
             try {
                 SymbolTable.top.getItem(ClassSymbolTableItem.START_KEY +
-                        ((ClassType) returnedType).getClassName().getName(), true);
+                        inputClassType.getClassName().getName(), true);
             } catch (ItemNotFoundException err) {
-                ClassNotDeclared exception = new ClassNotDeclared(varDeclaration.getLine(),
-                        ((ClassType) returnedType).getClassName().getName());
-                varDeclaration.addError(exception);
+                ClassNotDeclared exception = new ClassNotDeclared(line,
+                        inputClassType.getClassName().getName());
+                errors.add(exception);
             }
         }
+
+        else if (inputType instanceof FptrType) {
+            FptrType inputFptrType = (FptrType) inputType;
+            for (Type argType : inputFptrType.getArgumentsTypes()) {
+                errors.addAll(this.checkVarDecType(argType, line));
+            }
+        }
+
+        return errors;
+    }
+
+    @Override
+    public Void visit(VarDeclaration varDeclaration) {
+        Type returnedType = varDeclaration.getType();
+        ArrayList<CompileErrorException> errorsInType = this.checkVarDecType(varDeclaration.getType(),
+                varDeclaration.getLine());
+        for (CompileErrorException exception : errorsInType) {
+            varDeclaration.addError(exception);
+        }
+
         return null;
     }
 
