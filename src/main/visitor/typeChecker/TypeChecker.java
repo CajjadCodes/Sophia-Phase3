@@ -301,7 +301,7 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(ForeachStmt foreachStmt) {
         loopDepthCount += 1;
         //TODO: is this necessary?
-        foreachStmt.getVariable().accept(this.expressionTypeChecker);
+        Type varType = foreachStmt.getVariable().accept(this.expressionTypeChecker);
         Type returnedType = foreachStmt.getList().accept(this.expressionTypeChecker);
 
         //error number 19
@@ -329,18 +329,16 @@ public class TypeChecker extends Visitor<Void> {
                     }
                 }
             }
-
             //error number 21
             //TODO: its probably super buggy, heavy check it
             try {
                 Type baseType =  ((ListType) returnedType).getElementsTypes().get(0).getType();
-                if (!(((LocalVariableSymbolTableItem)
-                        (SymbolTable.root.getItem(foreachStmt.getVariable().toString(), false))).getType() == baseType)) {
+                if ( varType != baseType) {
                     ForeachVarNotMatchList exception = new ForeachVarNotMatchList(foreachStmt);
                     foreachStmt.addError(exception);
                 }
             }
-            catch (ItemNotFoundException ex) {
+            catch (Exception ignored) {
             }
         }
 
