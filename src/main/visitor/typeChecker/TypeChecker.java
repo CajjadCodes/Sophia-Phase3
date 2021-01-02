@@ -306,7 +306,7 @@ public class TypeChecker extends Visitor<Void> {
         Type returnedType = foreachStmt.getList().accept(this.expressionTypeChecker);
 
         //error number 19
-        if(!(returnedType instanceof ListType) || !(returnedType instanceof NoType))
+        if(!(returnedType instanceof ListType) && !(returnedType instanceof NoType))
         {
             ForeachCantIterateNoneList exception = new ForeachCantIterateNoneList(foreachStmt.getLine());
             foreachStmt.addError(exception);
