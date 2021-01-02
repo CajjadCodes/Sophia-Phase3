@@ -6,6 +6,7 @@ import main.ast.nodes.declaration.classDec.classMembersDec.ConstructorDeclaratio
 import main.ast.nodes.declaration.classDec.classMembersDec.FieldDeclaration;
 import main.ast.nodes.declaration.classDec.classMembersDec.MethodDeclaration;
 import main.ast.nodes.declaration.variableDec.VarDeclaration;
+import main.ast.nodes.expression.operators.BinaryOperator;
 import main.ast.nodes.statement.*;
 import main.ast.nodes.statement.loop.BreakStmt;
 import main.ast.nodes.statement.loop.ContinueStmt;
@@ -247,12 +248,17 @@ public class TypeChecker extends Visitor<Void> {
         if((rightSideType instanceof NullType)) {
             CantUseValueOfVoidMethod exception = new CantUseValueOfVoidMethod(assignmentStmt.getLine());
             assignmentStmt.addError(exception);
+            return null;
         }
         isViolatingLvalue = false;
         ExpressionTypeChecker.indexingDepthForLvalueViolation = 0;
         Type leftSideType = assignmentStmt.getlValue().accept(this.expressionTypeChecker);
         if (isViolatingLvalue) { // error number 6
             LeftSideNotLvalue exception = new LeftSideNotLvalue(assignmentStmt.getLine());
+            assignmentStmt.addError(exception);
+        }
+        if (!expressionTypeChecker.isFirstTypeSubtypeOf(rightSideType, leftSideType)) {
+            UnsupportedOperandType exception = new UnsupportedOperandType(assignmentStmt.getLine(), BinaryOperator.assign.name());
             assignmentStmt.addError(exception);
         }
         return null;

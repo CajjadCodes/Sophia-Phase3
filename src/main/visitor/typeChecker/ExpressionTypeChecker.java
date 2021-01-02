@@ -118,6 +118,11 @@ public class ExpressionTypeChecker extends Visitor<Type> {
                 foundOperandTypeError = true;
             }
         }
+        else if (binaryExpression.getBinaryOperator() == BinaryOperator.assign) {
+            if (!this.isFirstTypeSubtypeOf(secondOperandType, firstOperandType)) {
+                foundOperandTypeError = true;
+            }
+        }
         else {
             foundOperandTypeError = true;
         }
