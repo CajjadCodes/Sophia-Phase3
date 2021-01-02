@@ -322,7 +322,7 @@ public class TypeChecker extends Visitor<Void> {
                     if(!(type.getType() == tempType)) {
                         ForeachListElementsNotSameType exception = new ForeachListElementsNotSameType(foreachStmt.getLine());
                         foreachStmt.addError(exception);
-
+                        break;
                     }
                 }
             }
