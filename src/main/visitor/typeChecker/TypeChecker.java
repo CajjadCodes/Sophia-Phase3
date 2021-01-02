@@ -72,7 +72,7 @@ public class TypeChecker extends Visitor<Void> {
         boolean mainFound = false;
         SymbolTable.top = SymbolTable.root;
         for(ClassDeclaration classDeclaration : program.getClasses()) {
-            if(classDeclaration.getClassName().toString().equals("Main")) {
+            if(classDeclaration.toString().equals("ClassDeclaration_Main")) {
                 mainFound = true;
                 checkMainClassErrors(classDeclaration);
             }
@@ -155,7 +155,6 @@ public class TypeChecker extends Visitor<Void> {
                     methodDeclaration.addError(exception);
                 }
             }
-
 
             SymbolTable.pop();
             currentMethodReturnedType = null;
