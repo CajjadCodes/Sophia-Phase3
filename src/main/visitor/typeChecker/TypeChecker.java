@@ -313,13 +313,16 @@ public class TypeChecker extends Visitor<Void> {
             //error number 20
             Type tempType = null;
             boolean typeSet = false;
-            for(ListNameType type:((ListType) returnedType).getElementsTypes()) {
-                if(!(type.getType() instanceof NoType) && !(typeSet)) {
+            for(ListNameType type:((ListType) returnedType).getElementsTypes())
+            {
+                if(!(type.getType() instanceof NoType) && !(typeSet))
+                {
                     tempType = type.getType();
                     typeSet = true;
                 }
                 else {
-                    if(!(type.getType() == tempType)) {
+                    if(!(type.getType() == tempType))
+                    {
                         ForeachListElementsNotSameType exception = new ForeachListElementsNotSameType(foreachStmt.getLine());
                         foreachStmt.addError(exception);
                         break;
