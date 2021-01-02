@@ -207,8 +207,13 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(AssignmentStmt assignmentStmt) {
-        assignmentStmt.getlValue().accept(this.expressionTypeChecker);
-        assignmentStmt.getrValue().accept(this.expressionTypeChecker);
+        Type leftSideType = assignmentStmt.getlValue().accept(this.expressionTypeChecker);
+        Type rightSideType = assignmentStmt.getrValue().accept(this.expressionTypeChecker);
+        if((rightSideType instanceof NullType))
+        {
+            CantUseValueOfVoidMethod exception = new CantUseValueOfVoidMethod(assignmentStmt.getLine());
+            assignmentStmt.addError(exception);
+        }
         return null;
     }
 
@@ -234,7 +239,12 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(MethodCallStmt methodCallStmt) {
-        methodCallStmt.accept(this.expressionTypeChecker);
+        Type returnedType = methodCallStmt.getMethodCall().accept(this.expressionTypeChecker);
+        if(returnedType instanceof NoType)
+        {
+            CallOnNoneFptrType exception = new CallOnNoneFptrType(methodCallStmt.getLine());
+            methodCallStmt.addError(exception);
+        }
         return null;
     }
 
