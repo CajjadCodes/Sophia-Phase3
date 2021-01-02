@@ -36,6 +36,8 @@ public class TypeChecker extends Visitor<Void> {
     private final ExpressionTypeChecker expressionTypeChecker;
     public static ClassDeclaration currentClass = null;
     public static int loopDepthCount = 0;
+    public Type currentMethodReturnedType = null;
+    public boolean returnFound = false;
 
     public TypeChecker(Graph<String> classHierarchy) {
         this.classHierarchy = classHierarchy;
@@ -129,8 +131,10 @@ public class TypeChecker extends Visitor<Void> {
     @Override
     public Void visit(MethodDeclaration methodDeclaration) {
         try {
+            returnFound = false;
             MethodSymbolTableItem methodSymbolTableItem = (MethodSymbolTableItem) SymbolTable.top.getItem(MethodSymbolTableItem.START_KEY + methodDeclaration.getMethodName().getName(), false);
             SymbolTable.push(methodSymbolTableItem.getMethodSymbolTable());
+            currentMethodReturnedType = methodDeclaration.getReturnType();
             for(VarDeclaration varDeclaration : methodDeclaration.getArgs()) {
                 varDeclaration.accept(this);
             }
@@ -140,10 +144,22 @@ public class TypeChecker extends Visitor<Void> {
             for(Statement statement : methodDeclaration.getBody()) {
                 statement.accept(this);
             }
+
+            //error number 31
+            if(!(currentMethodReturnedType instanceof NullType))
+            {
+                if(!returnFound)
+                {
+                    MissingReturnStatement exception = new MissingReturnStatement(methodDeclaration);
+                    methodDeclaration.addError(exception);
+                }
+            }
+
+
             SymbolTable.pop();
+            currentMethodReturnedType = null;
+            returnFound = false;
         } catch (ItemNotFoundException ignored) {}
-
-
         return null;
     }
 
@@ -235,7 +251,15 @@ public class TypeChecker extends Visitor<Void> {
 
     @Override
     public Void visit(ReturnStmt returnStmt) {
-        returnStmt.getReturnedExpr().accept(this.expressionTypeChecker);
+        //TODO: check to see if it works properly
+        //error number 14
+        Type returnedType = returnStmt.getReturnedExpr().accept(this.expressionTypeChecker);
+        if (!(expressionTypeChecker.isFirstTypeSubtypeOf(returnedType, currentMethodReturnedType)))
+        {
+            ReturnValueNotMatchMethodReturnType exception = new ReturnValueNotMatchMethodReturnType(returnStmt);
+            returnStmt.addError(exception);
+        }
+        returnFound = true;
         return null;
     }
 
